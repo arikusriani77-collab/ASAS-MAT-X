@@ -113,8 +113,8 @@ const tb = (h,rows) => `<div style="overflow-x:auto;margin:8px 0"><table><tr>${h
 const tbh = rows => `<div style="overflow-x:auto;margin:8px 0"><table>${rows.map(r=>`<tr><th>${r[0]}</th>${r.slice(1).map(x=>`<td class="c">${x}</td>`).join("")}</tr>`).join("")}</table></div>`;
 
 /* Setiap siswa (dan tiap percobaan) mendapat angka berbeda: seluruh parameter diacak dari seed.
-   Soal 1–10  : BILANGAN (eksponen, bentuk akar, logaritma, persamaan eksponen/logaritma)
-   Soal 11–20 : BARISAN DAN DERET (aritmetika, geometri, tak hingga, bunga, pertumbuhan & peluruhan) */
+   Soal 1–9   : BILANGAN (eksponen, bentuk akar, logaritma, persamaan eksponen/logaritma)
+   Soal 10–20 : BARISAN DAN DERET (aritmetika, geometri, tak hingga, bunga, pertumbuhan & peluruhan) */
 function buatSoal(seed){
   const R=rng(seed),ri=(a,b)=>a+Math.floor(R()*(b-a+1)),pc=a=>a[Math.floor(R()*a.length)];
   const pick=(a,n)=>shuf(a,R).slice(0,n);
@@ -149,9 +149,6 @@ function buatSoal(seed){
   // 5. PG – penjumlahan/pengurangan bentuk akar
   {const m=pc([2,3,5,6,7]);let a1,a2,a3,c,k;do{a1=ri(2,5);a2=ri(1,4);a3=ri(1,4);c=ri(2,3);k=a1+c*a2-a3}while(k<2);
    S.push({type:"pg",tag:"Operasi Bentuk Akar (Sederhanakan)",q:`Bentuk paling sederhana dari ${rt(a1*a1*m)} + ${sr(c,a2*a2*m)} − ${rt(a3*a3*m)} adalah …`,o:P(k,[a1+c*a2+a3,a1+c*a2,k+1,k-1,k+2],x=>sr(x,m))});}
-  // 6. PG – perkalian bentuk akar
-  {const m=pc([2,3,5]),kk=pc([2,3]),a=ri(2,5),b=ri(2,5),v=a*b*kk*m;
-   S.push({type:"pg",tag:"Perkalian Bentuk Akar",q:`Hasil dari ${sr(a,m)} × ${sr(b,m*kk*kk)} adalah …`,o:P(v,[a*b*m,a*b*kk,a*b*m*kk*kk,a*b*kk*kk,v+a*b])});}
   // 7. PG – merasionalkan penyebut
   {const [a,b]=pc([[7,3],[5,3],[11,2],[7,2],[6,2],[10,5],[8,5],[13,3],[5,2],[7,5]]),d=a-b,k=ri(2,4),p=d*k;
    S.push({type:"pg",tag:"Merasionalkan Penyebut",q:`Bentuk rasional dari ${fz(p,`${rt(a)} + ${rt(b)}`)} adalah …`,
@@ -200,10 +197,18 @@ function buatSoal(seed){
   // 19. Isian – bunga tunggal
   {const M=pc([2,4,5])*1e6,r=pc([4,6,8,12]),p=pc([3,6]),t=pc([2,3,4]);
    S.push({type:"pg",tag:"Bunga Tunggal",q:`Rani menabung Rp${rp(M)},00 di bank dengan bunga tunggal ${r}% per tahun yang dibayarkan setiap ${p} bulan. Saldo tabungan Rani pada akhir tahun ke-${t} adalah …`,o:P(Math.round(M*(100+r*t)/100),[Math.round(M*(1+r/100)**t),M*r*t/100,Math.round(M*(100+r)/100),Math.round(M*(100+r*(t+1))/100),Math.round(M*(100+r*(t-1))/100)],x=>"Rp"+rp(x),M/100)});}
-  // 20. PG – bunga majemuk / pertumbuhan dan peluruhan
-  {const M=pc([5,10,20,40])*1e6,r=pc([5,10,20,25]),n=pc([2,3]),tum=R()<.5,sg=tum?1:-1,f=1+sg*r/100,v=Math.round(M*f**n),
-    q=tum?`Modal Rp${rp(M)},00 diinvestasikan dengan bunga majemuk ${r}% per tahun. Besar modal pada akhir tahun ke-${n} adalah …`:`Harga sebuah mesin Rp${rp(M)},00 menyusut ${r}% setiap tahun dari harga tahun sebelumnya. Harga mesin setelah ${n} tahun adalah …`;
-   S.push({type:"pg",tag:tum?"Bunga Majemuk":"Peluruhan",q,o:P(v,[M*(1+sg*r*n/100),M*f**(n-1),M*f**(n+1),M*(1+sg*r/100)].map(Math.round),x=>"Rp"+rp(x),M/100)});}
+  // 20. PG – bunga majemuk (semua siswa)  +  21. pertumbuhan ATAU peluruhan (acak per siswa)
+  {const dm=x=>String(Math.round(x*1e8)/1e8).replace(".",","),
+    mkq=(q,u,M,r,n,sg)=>{const f=1+sg*r/100,R$=x=>u+rp(Math.round(x)),t=([b,e])=>`(${dm(b)})<sup>${e}</sup> = ${dm(b**e)}`;
+      return {q:q+`<br><i>Catatan:</i><br>${shuf([[f,n],[1-sg*r/100,n],[f,n+1]].map(t),R).join("<br>")}`,
+        o:mk(R$(M*f**n),[R$(M*(1-sg*r/100)**n),R$(M*(1+sg*2*r/100)**n),R$(M*f**(n-1)),R$(M*f**(n+1))])}};
+   {const M=pc([5,10,20,40])*1e6,r=pc([5,10,20,25]),n=pc([2,3]);
+    S.push({type:"pg",tag:"Bunga Majemuk",...mkq(`Modal Rp${rp(M)},00 diinvestasikan dengan bunga majemuk ${r}% per tahun. Besar modal pada akhir tahun ke-${n} adalah …`,"Rp",M,r,n,1)});}
+   {const r=pc([5,10,20,25]),n=pc([2,3]);
+    if(R()<.5){const N=pc([8,16,24,32])*1000;
+     S.push({type:"pg",tag:"Pertumbuhan",...mkq(`Jumlah penduduk suatu desa saat ini ${rp(N)} jiwa dan bertambah ${r}% setiap tahun dari jumlah tahun sebelumnya. Jumlah penduduk desa tersebut setelah ${n} tahun adalah … jiwa.`,"",N,r,n,1)});}
+    else{const M=pc([5,10,20,40])*1e6;
+     S.push({type:"pg",tag:"Peluruhan",...mkq(`Harga sebuah mesin Rp${rp(M)},00 menyusut ${r}% setiap tahun dari harga tahun sebelumnya. Harga mesin setelah ${n} tahun adalah …`,"Rp",M,r,n,-1)});}}}
 
   return S.map((s,i)=>({...s,id:"S"+(i+1)}));
 }
